@@ -5,57 +5,48 @@ void main() {
 }
 
 int part1(List<String> turns) {
-    TurnResult tr = new TurnResult(50, 0);
-    int count0 = 0;
-    for (String task : turns) {
-        tr = turn2(tr.pos(), task);
-        if(tr.pos()==0) {
-            ++count0;
-        }
-    }
-    return count0;
+    return count0s(turns, tr -> tr.pos() == 0 ? 1 : 0);
 }
 
 int part2(List<String> turns) {
+   return count0s(turns, TurnResult::click0);
+}
+
+int count0s(List<String> turns, Function<TurnResult, Integer> f) {
     TurnResult tr = new TurnResult(50, 0);
     int count0 = 0;
     for (String task : turns) {
-        tr = turn2(tr.pos(), task);
-        count0 += tr.click0();
+        tr = turn(tr.pos(), task);
+        count0 += f.apply(tr);
     }
     return count0;
 }
 
-record TurnResult(int pos, int click0) {
-}
+record TurnResult(int pos, int click0) { }
 
-TurnResult turn2(int from, String task) {
+TurnResult turn(int from, String task) {
     boolean isLeft = task.startsWith("L");
-    int steps = Integer.parseInt(task.substring(1, task.length()));
+    int steps = Integer.parseInt(task.substring(1));
     int at = from;
-    int count0 = 0;
+    int count0 = steps / 100;
+    steps = steps % 100;
     if (isLeft) {
-        if (at == 0) {
+        if(at==0) {
             at = 100;
         }
-        while (at < steps) {
-            at += 100;
-            count0++;
-        }
-        at = (at - steps) % 100;
-        if (at == 0) {
+        if(at <= steps) {
+            at += (100-steps);
+            at %= 100;
             ++count0;
+        } else {
+            at -= steps;
         }
     } else {
-        while (at + steps >= 100) {
+        if(at+steps>=100) {
+            ++count0;
             steps -= 100;
-            count0++;
         }
         at += steps;
-        if (at < 0) {
-            at += 100;
-        }
-        at = at % 100;
     }
     return new TurnResult(at, count0);
 }
