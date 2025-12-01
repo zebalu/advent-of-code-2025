@@ -1,25 +1,15 @@
 void main() {
-    List<String> turns = readInput();
-    IO.println(part1(turns));
-    IO.println(part2(turns));
+    List<TurnResult> turnResults = readInput().stream().gather(Gatherers.scan(()->new TurnResult(50, 0), (tr, task) -> turn(tr.pos(), task))).toList();
+    IO.println(part1(turnResults));
+    IO.println(part2(turnResults));
 }
 
-int part1(List<String> turns) {
-    return count0s(turns, tr -> tr.pos() == 0 ? 1 : 0);
+int part1(List<TurnResult> turns) {
+    return (int)turns.stream().filter(tr->tr.pos()==0).count();
 }
 
-int part2(List<String> turns) {
-   return count0s(turns, TurnResult::click0);
-}
-
-int count0s(List<String> turns, Function<TurnResult, Integer> f) {
-    TurnResult tr = new TurnResult(50, 0);
-    int count0 = 0;
-    for (String task : turns) {
-        tr = turn(tr.pos(), task);
-        count0 += f.apply(tr);
-    }
-    return count0;
+int part2(List<TurnResult> turns) {
+   return turns.stream().mapToInt(TurnResult::click0).sum();
 }
 
 record TurnResult(int pos, int click0) { }
