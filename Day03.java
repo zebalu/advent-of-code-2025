@@ -1,24 +1,19 @@
 void main() {
+    Instant start = Instant.now();
     var jolts = readInput();
     IO.println(jolts.stream().mapToLong(jolt -> findLargestJoltage(jolt, 2)).sum());
     IO.println(jolts.stream().mapToLong(jolt -> findLargestJoltage(jolt, 12)).sum());
+    System.out.println(Duration.between(start, Instant.now()).toMillis());
 }
-
-record MaxIndex(int max, int index) { }
 
 long findLargestJoltage(List<Integer> jolt, int digits) {
-    int from = 0;
+    int from = -1;
     long maxJoltage = 0L;
     for (int i = 0; i < digits; ++i) {
-        var mi = findMaxWitIndex(jolt, from, jolt.size() - (digits - i - 1));
-        from = mi.index() + 1;
-        maxJoltage = maxJoltage * 10 + mi.max();
+        from = IntStream.range(from+1, jolt.size() - (digits - i - 1)).boxed().max(Comparator.comparingInt(jolt::get)).orElseThrow();
+        maxJoltage = maxJoltage * 10 + jolt.get(from);
     }
     return maxJoltage;
-}
-
-MaxIndex findMaxWitIndex(List<Integer> list, int from, int to) {
-    return IntStream.range(from, to).mapToObj(i -> new MaxIndex(list.get(i), i)).max(Comparator.comparingInt(MaxIndex::max)).orElseThrow();
 }
 
 List<List<Integer>> readInput() {
