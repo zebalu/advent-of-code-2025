@@ -8,7 +8,7 @@ long findLargestJoltage(List<Integer> jolt, int digits) {
     int from = -1;
     long maxJoltage = 0L;
     for (int i = 0; i < digits; ++i) {
-        from = IntStream.range(from+1, jolt.size() - (digits - i - 1)).boxed().max(Comparator.comparingInt(jolt::get)).orElseThrow();
+        from = IntStream.range(from + 1, jolt.size() - (digits - i - 1)).boxed().max(Comparator.comparingInt(jolt::get)).orElseThrow();
         maxJoltage = maxJoltage * 10 + jolt.get(from);
     }
     return maxJoltage;
