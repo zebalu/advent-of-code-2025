@@ -20,24 +20,12 @@ long findLargestJoltage(List<Integer> jolt, int digits) {
 }
 
 MaxIndex findMaxWitIndex(List<Integer> list, int from, int to) {
-    MaxIndex result = new MaxIndex(list.get(from), from);
-    for (int i = from + 1; i < to; ++i) {
-        if (result.max() < list.get(i)) {
-            result = new MaxIndex(list.get(i), i);
-        }
-    }
-    return result;
+    return IntStream.range(from, to).mapToObj(i -> new MaxIndex(list.get(i), i)).max(Comparator.comparingInt(MaxIndex::max)).orElseThrow();
 }
 
 List<List<Integer>> readInput() {
     try (Stream<String> lines = Files.lines(Path.of("input_03.txt"))) {
-        return lines.map(s -> {
-            List<Integer> list = new ArrayList<>();
-            for (int i = 0; i < s.length(); ++i) {
-                list.add(Integer.parseInt(s.charAt(i) + ""));
-            }
-            return list;
-        }).toList();
+        return lines.map(s -> s.chars().map(Character::getNumericValue).boxed().collect(Collectors.toList())).toList();
     } catch (IOException e) {
         throw new RuntimeException(e);
     }
