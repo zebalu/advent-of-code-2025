@@ -1,9 +1,7 @@
 void main() {
-    Instant start = Instant.now();
     var jolts = readInput();
     IO.println(jolts.stream().mapToLong(jolt -> findLargestJoltage(jolt, 2)).sum());
     IO.println(jolts.stream().mapToLong(jolt -> findLargestJoltage(jolt, 12)).sum());
-    System.out.println(Duration.between(start, Instant.now()).toMillis());
 }
 
 long findLargestJoltage(List<Integer> jolt, int digits) {
