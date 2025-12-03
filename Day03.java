@@ -7,11 +7,11 @@ void main() {
 record MaxIndex(int max, int index) { }
 
 long findLargestJoltage(List<Integer> jolt, int digits) {
-    int prevStart = 0;
+    int from = 0;
     long maxJoltage = 0L;
     for (int i = 0; i < digits; ++i) {
-        var mi = findMaxWitIndex(jolt, prevStart, jolt.size() - (digits - i - 1));
-        prevStart = mi.index() + 1;
+        var mi = findMaxWitIndex(jolt, from, jolt.size() - (digits - i - 1));
+        from = mi.index() + 1;
         maxJoltage = maxJoltage * 10 + mi.max();
     }
     return maxJoltage;
