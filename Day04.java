@@ -5,34 +5,31 @@ void main() {
 }
 
 private int part1(List<char[]> input) {
-    int sum = 0;
-    for (int y = 0; y < input.size(); ++y) {
-        for (int x = 0; x < input.get(y).length; ++x) {
-            if (isMoveable(input, new Coord(x, y))) {
-                ++sum;
-            }
-        }
-    }
-    return sum;
+    return getMovables(input).size();
 }
 
 private int part2(List<char[]> input) {
-    boolean wasMoved = false;
+    List<Coord> movables;
     int moved = 0;
     do {
-        wasMoved = false;
-        for (int y = 0; y < input.size(); ++y) {
-            for (int x = 0; x < input.get(y).length; ++x) {
-                Coord coord = new Coord(x, y);
-                if (isMoveable(input, coord)) {
-                    ++moved;
-                    setAt(input, coord, 'X');
-                    wasMoved = true;
-                }
+        movables = getMovables(input);
+        moved += movables.size();
+        movables.forEach(c -> setAt(input, c, 'X'));
+    } while (!movables.isEmpty());
+    return moved;
+}
+
+List<Coord> getMovables(List<char[]> input) {
+    List<Coord> movables = new ArrayList<>();
+    for (int y = 0; y < input.size(); ++y) {
+        for (int x = 0; x < input.get(y).length; ++x) {
+            Coord coord = new Coord(x, y);
+            if (isMoveable(input, coord)) {
+                movables.add(coord);
             }
         }
-    } while (wasMoved);
-    return moved;
+    }
+    return movables;
 }
 
 boolean isMoveable(List<char[]> matrix, Coord coord) {
@@ -61,9 +58,11 @@ record Coord(int x, int y) {
     }
 
     List<Coord> neighbours() {
-        return List.of(new Coord(x - 1, y - 1), new Coord(x, y - 1), new Coord(x + 1, y - 1),
-                new Coord(x - 1, y), new Coord(x + 1, y),
-                new Coord(x - 1, y + 1), new Coord(x, y + 1), new Coord(x + 1, y + 1));
+        return List.of(
+                new Coord(x - 1, y - 1), new Coord(x, y - 1), new Coord(x + 1, y - 1),
+                new Coord(x - 1, y),                                 new Coord(x + 1, y),
+                new Coord(x - 1, y + 1), new Coord(x, y + 1), new Coord(x + 1, y + 1)
+        );
     }
 }
 
