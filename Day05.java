@@ -31,7 +31,7 @@ Set<Range> distinct(List<Range> ranges) {
                     changed = true;
                     toClean.remove(toCheck);
                     toClean.remove(range);
-                    toClean.addAll(range.merge(toCheck));
+                    toClean.add(range.merge(toCheck));
                 }
             }
         }
@@ -52,10 +52,10 @@ record Range(long from, long to) {
         }
     }
 
-    Set<Range> merge(Range other) {
+    Range merge(Range other) {
         if (hasIntersection(other)) {
             List<Long> borders = Stream.of(from, to, other.from, other.to).sorted().toList();
-            return Set.of(new Range(borders.getFirst(), borders.getLast()));
+            return new Range(borders.getFirst(), borders.getLast());
         } else {
             throw new IllegalArgumentException("Could not merge ranges without intersection: "+this+" + "+other);
         }
