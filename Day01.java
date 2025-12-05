@@ -17,26 +17,16 @@ record TurnResult(int pos, int click0) { }
 TurnResult turn(int from, String task) {
     boolean isLeft = task.startsWith("L");
     int steps = Integer.parseInt(task.substring(1));
-    int at = from;
-    int count0 = steps / 100;
-    steps = steps % 100;
+    int sum = from + (isLeft ? -steps : steps);
+    int count0 = Math.abs(Math.floorDiv(sum, 100));
+    int at = Math.floorMod(sum, 100);
     if (isLeft) {
-        if(at==0) {
-            at = 100;
-        }
-        if(at <= steps) {
-            at += (100-steps);
-            at %= 100;
+        if (at == 0) {
             ++count0;
-        } else {
-            at -= steps;
         }
-    } else {
-        if(at+steps>=100) {
-            ++count0;
-            steps -= 100;
+        if (from == 0) {
+            --count0;
         }
-        at += steps;
     }
     return new TurnResult(at, count0);
 }
