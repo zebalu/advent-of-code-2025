@@ -54,8 +54,7 @@ record Range(long from, long to) {
 
     Range merge(Range other) {
         if (hasIntersection(other)) {
-            List<Long> borders = Stream.of(from, to, other.from, other.to).sorted().toList();
-            return new Range(borders.getFirst(), borders.getLast());
+            return new Range(Math.min(from, other.from), Math.max(to, other.to));
         } else {
             throw new IllegalArgumentException("Could not merge ranges without intersection: "+this+" + "+other);
         }
