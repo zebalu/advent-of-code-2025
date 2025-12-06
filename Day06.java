@@ -9,7 +9,7 @@ long compute1(List<String> column) {
 }
 
 long compute2(List<String> column) {
-    return execute(readNumbersByColum(column.subList(0, column.size() - 1)).stream().mapToLong(Long::longValue), column.getLast().trim());
+    return execute(readNumbersByColum(column.subList(0, column.size() - 1)).stream().mapToLong(Long::longValue), column.getLast().strip());
 }
 
 long execute(LongStream nums, String method) {
@@ -69,13 +69,10 @@ List<List<String>> transposeByOperators(List<String> input) {
         result.add(new ArrayList<>());
     }
     for (var line : input) {
-        for (int j = 0; j < columStarts.size(); ++j) {
-            if (j < columStarts.size() - 1) {
-                result.get(j).add(line.substring(columStarts.get(j), columStarts.get(j + 1) - 1));
-            } else {
-                result.get(j).add(line.substring(columStarts.get(j)));
-            }
+        for (int j = 0; j < columStarts.size() - 1; ++j) {
+            result.get(j).add(line.substring(columStarts.get(j), columStarts.get(j + 1) - 1));
         }
+        result.getLast().add(line.substring(columStarts.getLast()));
     }
     return result;
 }
