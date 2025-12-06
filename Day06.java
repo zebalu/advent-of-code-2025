@@ -43,7 +43,7 @@ List<Long> readNumbersByColum(List<String> column) {
             }
         }
     }
-    return result.reversed(); // just to match how example
+    return result.reversed(); // just to match how example looks like
 }
 
 List<List<String>> transpose(List<String> input) {
