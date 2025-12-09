@@ -1,11 +1,11 @@
 void main() {
     var input = readInput();
-    var lines = IntStream.range(0, input.size()).mapToObj(i -> Rectangel.fromCoords(input.get(i), input.get((i + 1) % input.size()))).toList();
+    var lines = IntStream.range(0, input.size()).mapToObj(i -> Rectangle.fromCoords(input.get(i), input.get((i + 1) % input.size()))).toList();
     long part1 = Long.MIN_VALUE;
     long part2 = Long.MIN_VALUE;
     for (int i = 0; i < input.size() - 1; ++i) {
         for (int j = i + 1; j < input.size(); ++j) {
-            Rectangel rect = Rectangel.fromCoords(input.get(i), input.get(j));
+            Rectangle rect = Rectangle.fromCoords(input.get(i), input.get(j));
             long area = rect.area();
             if (area > part1) {
                 part1 = area;
@@ -26,21 +26,21 @@ record Coord(long x, long y) {
     }
 }
 
-record Rectangel(Coord topLeft, Coord bottomRight) {
-    boolean isOverlap(Rectangel other) {
-        return topLeft.x < other.bottomRight.x && bottomRight.x > other.topLeft.x && topLeft.y < other.bottomRight.y && bottomRight.y > other.topLeft.y;
+record Rectangle(Coord min, Coord max) {
+    boolean isOverlap(Rectangle other) {
+        return min.x < other.max.x && max.x > other.min.x && min.y < other.max.y && max.y > other.min.y;
     }
 
     long area() {
-        return (bottomRight.x - topLeft.x + 1) * (bottomRight.y - topLeft.y + 1);
+        return (max.x - min.x + 1) * (max.y - min.y + 1);
     }
 
-    static Rectangel fromCoords(Coord a, Coord b) {
+    static Rectangle fromCoords(Coord a, Coord b) {
         long minX = Math.min(a.x, b.x);
         long minY = Math.min(a.y, b.y);
         long maxX = Math.max(a.x, b.x);
         long maxY = Math.max(a.y, b.y);
-        return new Rectangel(new Coord(minX, minY), new Coord(maxX, maxY));
+        return new Rectangle(new Coord(minX, minY), new Coord(maxX, maxY));
     }
 }
 
