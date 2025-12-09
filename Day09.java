@@ -19,11 +19,9 @@ record Rectangle(Coord min, Coord max) {
     boolean isOverlap(Rectangle other) {
         return min.x < other.max.x && max.x > other.min.x && min.y < other.max.y && max.y > other.min.y;
     }
-
     long area() {
         return (max.x - min.x + 1) * (max.y - min.y + 1);
     }
-
     static Rectangle fromCoords(Coord a, Coord b) {
         return new Rectangle(new Coord(Math.min(a.x, b.x), Math.min(a.y, b.y)), new Coord(Math.max(a.x, b.x), Math.max(a.y, b.y)));
     }
