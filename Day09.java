@@ -36,11 +36,7 @@ record Rectangle(Coord min, Coord max) {
     }
 
     static Rectangle fromCoords(Coord a, Coord b) {
-        long minX = Math.min(a.x, b.x);
-        long minY = Math.min(a.y, b.y);
-        long maxX = Math.max(a.x, b.x);
-        long maxY = Math.max(a.y, b.y);
-        return new Rectangle(new Coord(minX, minY), new Coord(maxX, maxY));
+        return new Rectangle(new Coord(Math.min(a.x, b.x), Math.min(a.y, b.y)), new Coord(Math.max(a.x, b.x), Math.max(a.y, b.y)));
     }
 }
 
