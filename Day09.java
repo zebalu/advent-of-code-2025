@@ -1,22 +1,11 @@
 void main() {
     var input = readInput();
+    
+    var rectangles = IntStream.range(0, input.size() - 1).boxed().flatMap(i -> IntStream.range(i + 1, input.size()).mapToObj(j -> Rectangle.fromCoords(input.get(i), input.get(j)))).toList();
+    IO.println(rectangles.stream().mapToLong(Rectangle::area).max().orElseThrow());
+    
     var lines = IntStream.range(0, input.size()).mapToObj(i -> Rectangle.fromCoords(input.get(i), input.get((i + 1) % input.size()))).toList();
-    long part1 = Long.MIN_VALUE;
-    long part2 = Long.MIN_VALUE;
-    for (int i = 0; i < input.size() - 1; ++i) {
-        for (int j = i + 1; j < input.size(); ++j) {
-            Rectangle rect = Rectangle.fromCoords(input.get(i), input.get(j));
-            long area = rect.area();
-            if (area > part1) {
-                part1 = area;
-            }
-            if (area > part2 && lines.stream().noneMatch(rect::isOverlap)) {
-                part2 = area;
-            }
-        }
-    }
-    IO.println(part1);
-    IO.println(part2);
+    IO.println(rectangles.stream().filter(r -> lines.stream().noneMatch(r::isOverlap)).mapToLong(Rectangle::area).max().orElseThrow());
 }
 
 record Coord(long x, long y) {
