@@ -60,7 +60,7 @@ void update(Map<Coord, Long> beamWays, Coord pos, long value) {
 
 List<String> readInput() {
     try {
-        return Files.readAllLines(Path.of("example_07.txt"), StandardCharsets.UTF_8);
+        return Files.readAllLines(Path.of("input_07.txt"), StandardCharsets.UTF_8);
     } catch (IOException e) {
         throw new RuntimeException(e);
     }
