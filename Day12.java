@@ -40,7 +40,7 @@ void main() {
         }
     }
     var vars = shapes.stream().map(ShapeVariations::fromShape).toList();
-    System.out.println(areas.stream().parallel()
+    System.out.println(areas.stream()
             .filter(a->a.testFit(vars)).count());
 }
 
@@ -139,10 +139,10 @@ record Area(int width, int length, List<Integer> presents) {
         }
         ShapeVariations shapeVariations = presentQueue.pollFirst();
         for(Shape shape : shapeVariations.shapes) {
-            for(int x=0; x<width; ++x) {
-                for(int y=0; y<length; ++y) {
+            for(int y=0; y<length-2; ++y) {
+            for(int x=0; x<width-2; ++x) {
                     List<Coord> translated = shape.getTranslated(x,y);
-                    if(translated.stream().allMatch(c->!occupied.contains(c) && 0<=c.x && c.x<width&&0<=c.y&&c.y<length)) {
+                    if(translated.stream().noneMatch(occupied::contains)) {
                         occupied.addAll(translated);
                         if(testFit(occupied, presentQueue)) {
                             return true;
