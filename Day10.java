@@ -1,7 +1,7 @@
 void main() {
     var input = readInput();
     IO.println(input.stream().mapToInt(Machine::countFewestPresses).sum());
-    IO.println(input.stream().mapToInt(Machine::countFewestJoltagePressesByGaussJordan).sum());
+    IO.println(input.stream().parallel().mapToInt(Machine::countFewestJoltagePressesByGaussJordan).sum());
 }
 
 record Machine(List<Boolean> lights, List<SequencedSet<Integer>> buttons, List<Integer> joltage) {
@@ -37,20 +37,15 @@ record Machine(List<Boolean> lights, List<SequencedSet<Integer>> buttons, List<I
     }
 
     int countFewestJoltagePressesByGaussJordan() {
-        Fraction[][] columns = new Fraction[buttons.size()][joltage.size()];
-        for (int i = 0; i < columns.length; ++i) {
-            for (int j = 0; j < columns[i].length; ++j) {
-                columns[i][j] = Fraction.ZERO;
-            }
-        }
+        double[][] columns = new double[buttons.size()][joltage.size()];
         for (int col = 0; col < buttons.size(); col++) {
             int colNum = col;
             buttons.get(col).forEach(rownum -> {
-                columns[colNum][rownum] = Fraction.whole(1);
+                columns[colNum][rownum] = 1.0;
             });
         }
         Matrix matrix = new Matrix(columns);
-        Fraction[] solution = joltage.stream().map(Fraction::whole).toArray(Fraction[]::new);
+        double[] solution = joltage.stream().mapToDouble(Integer::doubleValue).toArray();
         int[] result = matrix.gaussJordenEliminate(solution);
         return Arrays.stream(result).sum();
     }
@@ -81,90 +76,21 @@ List<Machine> readInput() {
     }
 }
 
-record Fraction(long top, long bottom) implements Comparable<Fraction> {
-
-    Fraction add(Fraction other) {
-        long newTop = this.top * other.bottom + other.top * this.bottom;
-        long newBottom = this.bottom * other.bottom;
-        return Fraction.of(newTop, newBottom);
-    }
-
-    Fraction subtract(Fraction other) {
-        long newTop = this.top * other.bottom - other.top * this.bottom;
-        long newBottom = this.bottom * other.bottom;
-        return Fraction.of(newTop, newBottom);
-    }
-
-    Fraction multiply(Fraction other) {
-        long newTop = this.top * other.top;
-        long newBottom = this.bottom * other.bottom;
-        return Fraction.of(newTop, newBottom);
-    }
-
-    Fraction divide(Fraction other) {
-        long newTop = this.top * other.bottom;
-        long newBottom = this.bottom * other.top;
-        return Fraction.of(newTop, newBottom);
-    }
-
-    boolean isWhole() {
-        return bottom == 1;
-    }
-
-    @Override
-    public String toString() {
-        return top + "/" + bottom;
-    }
-
-    @Override
-    public int compareTo(Fraction o) {
-        return COMPARATOR.compare(this, o);
-    }
-
-    public static final Fraction ZERO = new Fraction(0, 1);
-    private static final Comparator<Fraction> COMPARATOR = Comparator.comparingDouble(f -> f.top / (double) f.bottom);
-
-    static Fraction of(long top, long bottom) {
-        long gcd = gcd(Math.abs(top), Math.abs(bottom));
-        long a = top;
-        long b = bottom;
-        if (bottom < 0) {
-            a = -a;
-            b = -b;
-        }
-        return new Fraction(a / gcd, b / gcd);
-    }
-
-    static Fraction whole(long whole) {
-        return new Fraction(whole, 1);
-    }
-
-    private static long gcd(long a, long b) {
-        long max = Math.max(a, b);
-        long min = Math.min(a, b);
-        while (min != 0) {
-            long temp = min;
-            min = max % min;
-            max = temp;
-        }
-        return max;
-    }
-}
-
 static class Matrix {
-    Fraction[][] elements;
+    static final double EPS = 1e-7;
+    double[][] elements;
 
     Matrix(int rows, int columns) {
-        elements = new Fraction[rows][columns];
+        elements = new double[rows][columns];
     }
 
-    Matrix(Fraction[][] columns) {
+    Matrix(double[][] columns) {
         for (int i = 0; i < columns.length - 1; ++i) {
             if (columns[i].length != columns[i + 1].length) {
                 throw new IllegalArgumentException("Columns must have the same length");
             }
         }
-        elements = new Fraction[columns[0].length][columns.length];
+        elements = new double[columns[0].length][columns.length];
         for (int i = 0; i < elements.length; ++i) {
             for (int j = 0; j < elements[i].length; ++j) {
                 elements[i][j] = columns[j][i];
@@ -173,25 +99,25 @@ static class Matrix {
     }
 
     void switchRows(int row1, int row2) {
-        Fraction[] temp = elements[row1];
+        double[] temp = elements[row1];
         elements[row1] = elements[row2];
         elements[row2] = temp;
     }
 
     int rowIndexWithNonZeroInColAfter(int startRow, int checkColumn) {
         for (int i = startRow; i < elements.length; ++i) {
-            if (!elements[i][checkColumn].equals(Fraction.ZERO)) {
+            if (Math.abs(elements[i][checkColumn]) > EPS) {
                 return i;
             }
         }
         return -1;
     }
 
-    void gaussEliminate(Fraction[] solution) {
+    void gaussEliminate(double[] solution) {
         eliminate(solution, false);
     }
 
-    void eliminate(Fraction[] solution, boolean bothWays) {
+    void eliminate(double[] solution, boolean bothWays) {
         if (elements.length != solution.length) {
             throw new IllegalArgumentException("Matrix and solution array must have the same number of rows");
         }
@@ -207,22 +133,24 @@ static class Matrix {
             if (indexOfFirstPossiblePivot != -1) {
                 if (indexOfFirstPossiblePivot != row) {
                     switchRows(row, indexOfFirstPossiblePivot);
-                    swap(solution, row, indexOfFirstPossiblePivot);
+                    double temp = solution[row];
+                    solution[row] = solution[indexOfFirstPossiblePivot];
+                    solution[indexOfFirstPossiblePivot] = temp;
                 }
-                Fraction divider = elements[row][col];
-                if (!divider.equals(Fraction.ZERO)) {
+                double divider = elements[row][col];
+                if (Math.abs(divider) > EPS) {
                     for (int i = col; i < elements[row].length; ++i) {
-                        elements[row][i] = elements[row][i].divide(divider);
+                        elements[row][i] /= divider;
                     }
-                    solution[row] = solution[row].divide(divider);
+                    solution[row] /= divider;
                     for (int nextRow = bothWays ? 0 : row + 1; nextRow < elements.length; ++nextRow) {
                         if (nextRow != row) {
-                            Fraction multiplier = elements[nextRow][col];
-                            if (!elements[nextRow][col].equals(Fraction.ZERO)) {
+                            double multiplier = elements[nextRow][col];
+                            if (Math.abs(multiplier) > EPS) {
                                 for (int i = col; i < elements[row].length; ++i) {
-                                    elements[nextRow][i] = elements[nextRow][i].subtract(elements[row][i].multiply(multiplier));
+                                    elements[nextRow][i] -= elements[row][i] * multiplier;
                                 }
-                                solution[nextRow] = solution[nextRow].subtract(solution[row].multiply(multiplier));
+                                solution[nextRow] -= solution[row] * multiplier;
                             }
                         }
                     }
@@ -244,15 +172,15 @@ static class Matrix {
         }
     }
 
-    int[] gaussJordenEliminate(Fraction[] solution) {
+    int[] gaussJordenEliminate(double[] solution) {
         long maxJoltage = 0;
-        for (Fraction f : solution) {
-            maxJoltage = Math.max(maxJoltage, f.top());
+        for (double d : solution) {
+            maxJoltage = Math.max(maxJoltage, (long) Math.ceil(d));
         }
 
         eliminate(solution, true);
         int[] pivotRowForVariables = new int[elements[0].length];
-        Fraction[] finalSolution = new Fraction[elements[0].length];
+        double[] finalSolution = new double[elements[0].length];
         SequencedSet<Integer> freeVariables = new LinkedHashSet<>();
         for (int i = 0; i < pivotRowForVariables.length; ++i) {
             pivotRowForVariables[i] = -1;
@@ -261,7 +189,7 @@ static class Matrix {
         for (int row = 0; row < elements.length; ++row) {
             boolean pivotFound = false;
             for (int col = 0; col < elements[row].length && !pivotFound; ++col) {
-                if (!elements[row][col].equals(Fraction.ZERO)) {
+                if (Math.abs(elements[row][col]) > EPS) {
                     pivotRowForVariables[col] = row;
                     freeVariables.remove(col);
                     pivotFound = true;
@@ -281,7 +209,7 @@ static class Matrix {
         for (int row = 0; row < elements.length; ++row) {
             int r = row;
             rowCanBeIncreased[row] = freeVariables.stream()
-                    .anyMatch(freeCol -> elements[r][freeCol].compareTo(Fraction.ZERO) < 0);
+                    .anyMatch(freeCol -> elements[r][freeCol] < -EPS);
         }
 
         Deque<Guess> queue = new ArrayDeque<>(freeVarArray.length * 10);
@@ -290,16 +218,16 @@ static class Matrix {
         queue.add(startGuess);
         seen.add(startGuess);
 
-        Fraction[] bestSolution = null;
+        double[] bestSolution = null;
         int minSum = Integer.MAX_VALUE;
 
         while (!queue.isEmpty()) {
             Guess guess = queue.poll();
-            Fraction[] fullSolution = calculateSolution(pivotRowForVariables, solution, freeVarArray, guess.values);
+            double[] fullSolution = calculateSolution(pivotRowForVariables, solution, freeVarArray, guess.values);
             if (checkGuess(fullSolution)) {
                 int sum = 0;
-                for (Fraction f : fullSolution) {
-                    sum += (int) f.top();
+                for (double v : fullSolution) {
+                    sum += (int) Math.round(v);
                 }
                 if (sum < minSum) {
                     minSum = sum;
@@ -326,29 +254,29 @@ static class Matrix {
         throw new IllegalStateException("No solution found");
     }
 
-    private boolean canPrune(Fraction[] fullSolution, int[] pivotRowForVariables, boolean[] rowCanBeIncreased) {
+    private boolean canPrune(double[] fullSolution, int[] pivotRowForVariables, boolean[] rowCanBeIncreased) {
         for (int col = 0; col < fullSolution.length; ++col) {
             int row = pivotRowForVariables[col];
-            if (row != -1 && fullSolution[col].compareTo(Fraction.ZERO) < 0 && !rowCanBeIncreased[row]) {
+            if (row != -1 && fullSolution[col] < -EPS && !rowCanBeIncreased[row]) {
                 return true;
             }
         }
         return false;
     }
 
-    Fraction[] calculateSolution(int[] pivotPositions, Fraction[] solution, int[] freeVarArray, int[] guessValues) {
-        Fraction[] fullSolution = new Fraction[elements[0].length];
+    double[] calculateSolution(int[] pivotPositions, double[] solution, int[] freeVarArray, int[] guessValues) {
+        double[] fullSolution = new double[elements[0].length];
         for (int i = 0; i < freeVarArray.length; ++i) {
-            fullSolution[freeVarArray[i]] = Fraction.whole(guessValues[i]);
+            fullSolution[freeVarArray[i]] = guessValues[i];
         }
         for (int i = 0; i < fullSolution.length; ++i) {
             int row = pivotPositions[i];
             if (row != -1) {
-                Fraction sum = solution[row];
+                double sum = solution[row];
                 for (int j = 0; j < freeVarArray.length; ++j) {
                     int freeCol = freeVarArray[j];
-                    if (!elements[row][freeCol].equals(Fraction.ZERO)) {
-                        sum = sum.subtract(elements[row][freeCol].multiply(Fraction.whole(guessValues[j])));
+                    if (Math.abs(elements[row][freeCol]) > EPS) {
+                        sum -= elements[row][freeCol] * guessValues[j];
                     }
                 }
                 fullSolution[i] = sum;
@@ -357,21 +285,21 @@ static class Matrix {
         return fullSolution;
     }
 
-    int[] toIntArray(Fraction[] fractions) {
-        int[] ints = new int[fractions.length];
+    int[] toIntArray(double[] doubles) {
+        int[] ints = new int[doubles.length];
         for (int i = 0; i < ints.length; ++i) {
-            if (fractions[i].isWhole()) {
-                ints[i] = (int) fractions[i].top();
+            if (Math.abs(doubles[i] - Math.round(doubles[i])) < EPS) {
+                ints[i] = (int) Math.round(doubles[i]);
             } else {
-                throw new IllegalArgumentException("Fraction is not an integer");
+                throw new IllegalArgumentException("Value is not an integer: " + doubles[i]);
             }
         }
         return ints;
     }
 
-    boolean checkGuess(Fraction[] variables) {
-        for (Fraction f : variables) {
-            if (!f.isWhole() || f.compareTo(Fraction.ZERO) < 0) {
+    boolean checkGuess(double[] variables) {
+        for (double v : variables) {
+            if (v < -EPS || Math.abs(v - Math.round(v)) > EPS) {
                 return false;
             }
         }
@@ -381,15 +309,9 @@ static class Matrix {
     @Override
     public String toString() {
         StringJoiner sj = new StringJoiner("\n", "[\n", "\n]");
-        for (Fraction[] element : elements) {
+        for (double[] element : elements) {
             sj.add(Arrays.toString(element));
         }
         return sj.toString();
-    }
-
-    private static <T> void swap(T[] array, int i, int j) {
-        T temp = array[i];
-        array[i] = array[j];
-        array[j] = temp;
     }
 }
