@@ -35,14 +35,15 @@ record Machine(List<Boolean> lights, List<SequencedSet<Integer>> buttons, List<I
         }
         throw new IllegalStateException("Could not switch all lights on!");
     }
+
     int countFewestJoltagePressesByGaussJordan() {
         Fraction[][] columns = new Fraction[buttons.size()][joltage.size()];
-        for(int i=0; i<columns.length; ++i) {
-            for(int j=0; j<columns[i].length; ++j) {
+        for (int i = 0; i < columns.length; ++i) {
+            for (int j = 0; j < columns[i].length; ++j) {
                 columns[i][j] = Fraction.ZERO;
             }
         }
-        for(int col = 0; col < buttons.size(); col++) {
+        for (int col = 0; col < buttons.size(); col++) {
             int colNum = col;
             buttons.get(col).forEach(rownum -> {
                 columns[colNum][rownum] = Fraction.whole(1);
@@ -53,6 +54,7 @@ record Machine(List<Boolean> lights, List<SequencedSet<Integer>> buttons, List<I
         int[] result = matrix.gaussJordenEliminate(solution);
         return Arrays.stream(result).sum();
     }
+
     static Machine fromString(String line) {
         String[] spaces = line.split(" ");
         List<Boolean> lights = new ArrayList<>();
@@ -79,7 +81,7 @@ List<Machine> readInput() {
     }
 }
 
-record Fraction (long top, long bottom) implements Comparable<Fraction> {
+record Fraction(long top, long bottom) implements Comparable<Fraction> {
 
     Fraction add(Fraction other) {
         long newTop = this.top * other.bottom + other.top * this.bottom;
@@ -119,14 +121,14 @@ record Fraction (long top, long bottom) implements Comparable<Fraction> {
         return COMPARATOR.compare(this, o);
     }
 
-    public static final Fraction ZERO = new Fraction(0,1);
+    public static final Fraction ZERO = new Fraction(0, 1);
     private static final Comparator<Fraction> COMPARATOR = Comparator.comparingDouble(f -> f.top / (double) f.bottom);
 
     static Fraction of(long top, long bottom) {
         long gcd = gcd(Math.abs(top), Math.abs(bottom));
         long a = top;
         long b = bottom;
-        if(bottom < 0) {
+        if (bottom < 0) {
             a = -a;
             b = -b;
         }
@@ -157,14 +159,14 @@ static class Matrix {
     }
 
     Matrix(Fraction[][] columns) {
-        for(int i=0; i<columns.length-1; ++i) {
-            if(columns[i].length != columns[i+1].length) {
+        for (int i = 0; i < columns.length - 1; ++i) {
+            if (columns[i].length != columns[i + 1].length) {
                 throw new IllegalArgumentException("Columns must have the same length");
             }
         }
         elements = new Fraction[columns[0].length][columns.length];
-        for(int i=0; i<elements.length; ++i) {
-            for(int j=0; j<elements[i].length; ++j) {
+        for (int i = 0; i < elements.length; ++i) {
+            for (int j = 0; j < elements[i].length; ++j) {
                 elements[i][j] = columns[j][i];
             }
         }
@@ -177,8 +179,8 @@ static class Matrix {
     }
 
     int rowIndexWithNonZeroInColAfter(int startRow, int checkColumn) {
-        for(int i=startRow; i<elements.length; ++i) {
-            if(!elements[i][checkColumn].equals(Fraction.ZERO)) {
+        for (int i = startRow; i < elements.length; ++i) {
+            if (!elements[i][checkColumn].equals(Fraction.ZERO)) {
                 return i;
             }
         }
@@ -190,19 +192,19 @@ static class Matrix {
     }
 
     void eliminate(Fraction[] solution, boolean bothWays) {
-        if(elements.length != solution.length) {
+        if (elements.length != solution.length) {
             throw new IllegalArgumentException("Matrix and solution array must have the same number of rows");
         }
         int col = 0;
-        for(int row = 0; row<elements.length && col<elements[0].length; ++row) {
+        for (int row = 0; row < elements.length && col < elements[0].length; ++row) {
             int indexOfFirstPossiblePivot = -1;
             do {
-                indexOfFirstPossiblePivot = rowIndexWithNonZeroInColAfter(row,col);
-                if(indexOfFirstPossiblePivot<0) {
+                indexOfFirstPossiblePivot = rowIndexWithNonZeroInColAfter(row, col);
+                if (indexOfFirstPossiblePivot < 0) {
                     ++col;
                 }
-            } while(indexOfFirstPossiblePivot<0&&col<elements[0].length);
-            if(indexOfFirstPossiblePivot!=-1) {
+            } while (indexOfFirstPossiblePivot < 0 && col < elements[0].length);
+            if (indexOfFirstPossiblePivot != -1) {
                 if (indexOfFirstPossiblePivot != row) {
                     switchRows(row, indexOfFirstPossiblePivot);
                     swap(solution, row, indexOfFirstPossiblePivot);
@@ -230,6 +232,18 @@ static class Matrix {
         }
     }
 
+    record Guess(int[] values, int sum) {
+        @Override
+        public boolean equals(Object o) {
+            return o instanceof Guess g && Arrays.equals(values, g.values);
+        }
+
+        @Override
+        public int hashCode() {
+            return Arrays.hashCode(values);
+        }
+    }
+
     int[] gaussJordenEliminate(Fraction[] solution) {
         long maxJoltage = 0;
         for (Fraction f : solution) {
@@ -237,33 +251,42 @@ static class Matrix {
         }
 
         eliminate(solution, true);
-        int [] pivotRowForVariables = new int[elements[0].length];
+        int[] pivotRowForVariables = new int[elements[0].length];
         Fraction[] finalSolution = new Fraction[elements[0].length];
         SequencedSet<Integer> freeVariables = new LinkedHashSet<>();
-        for(int i=0; i<pivotRowForVariables.length; ++i) {
+        for (int i = 0; i < pivotRowForVariables.length; ++i) {
             pivotRowForVariables[i] = -1;
             freeVariables.add(i);
         }
-        for(int row = 0 ; row<elements.length; ++row) {
+        for (int row = 0; row < elements.length; ++row) {
             boolean pivotFound = false;
-            for(int col=0; col<elements[row].length && !pivotFound; ++col) {
-                if(!elements[row][col].equals(Fraction.ZERO)) {
+            for (int col = 0; col < elements[row].length && !pivotFound; ++col) {
+                if (!elements[row][col].equals(Fraction.ZERO)) {
                     pivotRowForVariables[col] = row;
                     freeVariables.remove(col);
                     pivotFound = true;
                 }
             }
         }
-        if(freeVariables.isEmpty()) {
-            for(int i=0; i<finalSolution.length; ++i) {
+        if (freeVariables.isEmpty()) {
+            for (int i = 0; i < finalSolution.length; ++i) {
                 finalSolution[i] = solution[pivotRowForVariables[i]];
             }
             return toIntArray(finalSolution);
         }
-        Queue<SequencedMap<Integer, Fraction>> queue = new ArrayDeque<>(freeVariables.size()*10);
-        Set<SequencedMap<Integer, Fraction>> seen = new HashSet<>();
-        SequencedMap<Integer, Fraction> startGuess = new LinkedHashMap<>();
-        freeVariables.forEach(i->startGuess.put(i, Fraction.ZERO));
+
+        int[] freeVarArray = freeVariables.stream().mapToInt(Integer::intValue).toArray();
+
+        boolean[] rowCanBeIncreased = new boolean[elements.length];
+        for (int row = 0; row < elements.length; ++row) {
+            int r = row;
+            rowCanBeIncreased[row] = freeVariables.stream()
+                    .anyMatch(freeCol -> elements[r][freeCol].compareTo(Fraction.ZERO) < 0);
+        }
+
+        Deque<Guess> queue = new ArrayDeque<>(freeVarArray.length * 10);
+        Set<Guess> seen = new HashSet<>();
+        Guess startGuess = new Guess(new int[freeVarArray.length], 0);
         queue.add(startGuess);
         seen.add(startGuess);
 
@@ -271,9 +294,9 @@ static class Matrix {
         int minSum = Integer.MAX_VALUE;
 
         while (!queue.isEmpty()) {
-            SequencedMap<Integer, Fraction> guess = queue.poll();
-            Fraction[] fullSolution = calculateSolution(pivotRowForVariables, solution, guess);
-            if(checkGuess(solution, fullSolution)) {
+            Guess guess = queue.poll();
+            Fraction[] fullSolution = calculateSolution(pivotRowForVariables, solution, freeVarArray, guess.values);
+            if (checkGuess(fullSolution)) {
                 int sum = 0;
                 for (Fraction f : fullSolution) {
                     sum += (int) f.top();
@@ -284,14 +307,14 @@ static class Matrix {
                 }
             }
 
-            long guessSum = guess.values().stream().mapToLong(Fraction::top).sum();
-            if (guessSum < minSum && !canPrune(fullSolution, pivotRowForVariables, freeVariables)) {
-                for (int i : freeVariables) {
-                    if (guess.get(i).top() < maxJoltage) {
-                        SequencedMap<Integer, Fraction> inc = new LinkedHashMap<>(guess);
-                        inc.put(i, inc.get(i).add(Fraction.whole(1)));
-                        if (seen.add(inc)) {
-                            queue.add(inc);
+            if (guess.sum < minSum && !canPrune(fullSolution, pivotRowForVariables, rowCanBeIncreased)) {
+                for (int i = 0; i < freeVarArray.length; ++i) {
+                    if (guess.values[i] < maxJoltage) {
+                        int[] nextVals = guess.values.clone();
+                        nextVals[i]++;
+                        Guess next = new Guess(nextVals, guess.sum + 1);
+                        if (seen.add(next)) {
+                            queue.add(next);
                         }
                     }
                 }
@@ -303,46 +326,42 @@ static class Matrix {
         throw new IllegalStateException("No solution found");
     }
 
-    private boolean canPrune(Fraction[] fullSolution, int[] pivotRowForVariables, SequencedSet<Integer> freeVariables) {
+    private boolean canPrune(Fraction[] fullSolution, int[] pivotRowForVariables, boolean[] rowCanBeIncreased) {
         for (int col = 0; col < fullSolution.length; ++col) {
             int row = pivotRowForVariables[col];
-            if (row != -1 && fullSolution[col].compareTo(Fraction.ZERO) < 0) {
-                boolean canBeIncreased = freeVariables.stream()
-                        .anyMatch(freeCol -> elements[row][freeCol].compareTo(Fraction.ZERO) < 0);
-                if (!canBeIncreased) {
-                    return true;
-                }
+            if (row != -1 && fullSolution[col].compareTo(Fraction.ZERO) < 0 && !rowCanBeIncreased[row]) {
+                return true;
             }
         }
         return false;
     }
 
-    Fraction[] calculateSolution(int[] pivotPositions, Fraction[] solution, SequencedMap<Integer, Fraction> guess) {
+    Fraction[] calculateSolution(int[] pivotPositions, Fraction[] solution, int[] freeVarArray, int[] guessValues) {
         Fraction[] fullSolution = new Fraction[elements[0].length];
-        for(int i=0; i<fullSolution.length; ++i) {
+        for (int i = 0; i < freeVarArray.length; ++i) {
+            fullSolution[freeVarArray[i]] = Fraction.whole(guessValues[i]);
+        }
+        for (int i = 0; i < fullSolution.length; ++i) {
             int row = pivotPositions[i];
-            if(pivotPositions[i]!=-1) {
-                fullSolution[i] = solution[row].subtract(sumGuesses(row, guess));
-            } else {
-                fullSolution[i] = guess.get(i);
+            if (row != -1) {
+                Fraction sum = solution[row];
+                for (int j = 0; j < freeVarArray.length; ++j) {
+                    int freeCol = freeVarArray[j];
+                    if (!elements[row][freeCol].equals(Fraction.ZERO)) {
+                        sum = sum.subtract(elements[row][freeCol].multiply(Fraction.whole(guessValues[j])));
+                    }
+                }
+                fullSolution[i] = sum;
             }
         }
         return fullSolution;
     }
 
-    Fraction sumGuesses(int row, SequencedMap<Integer, Fraction> guesses) {
-        Fraction sum = Fraction.ZERO;
-        for(int i:guesses.keySet()) {
-            sum = sum.add(elements[row][i].multiply(guesses.get(i)));
-        }
-        return sum;
-    }
-
     int[] toIntArray(Fraction[] fractions) {
         int[] ints = new int[fractions.length];
-        for(int i=0; i<ints.length; ++i) {
-            if(fractions[i].isWhole()) {
-                ints[i] = (int)fractions[i].top();
+        for (int i = 0; i < ints.length; ++i) {
+            if (fractions[i].isWhole()) {
+                ints[i] = (int) fractions[i].top();
             } else {
                 throw new IllegalArgumentException("Fraction is not an integer");
             }
@@ -350,23 +369,15 @@ static class Matrix {
         return ints;
     }
 
-    boolean checkGuess(Fraction[] solution, Fraction[] variables) {
+    boolean checkGuess(Fraction[] variables) {
         for (Fraction f : variables) {
             if (!f.isWhole() || f.compareTo(Fraction.ZERO) < 0) {
                 return false;
             }
         }
-        for (int row = 0; row < elements.length; ++row) {
-            Fraction sum = Fraction.ZERO;
-            for (int col = 0; col < elements[row].length; ++col) {
-                sum = sum.add(elements[row][col].multiply(variables[col]));
-            }
-            if (!sum.equals(solution[row])) {
-                return false;
-            }
-        }
         return true;
     }
+
     @Override
     public String toString() {
         StringJoiner sj = new StringJoiner("\n", "[\n", "\n]");
@@ -376,7 +387,7 @@ static class Matrix {
         return sj.toString();
     }
 
-    private static<T> void swap(T[] array, int i, int j) {
+    private static <T> void swap(T[] array, int i, int j) {
         T temp = array[i];
         array[i] = array[j];
         array[j] = temp;
