@@ -1,34 +1,42 @@
 void main() {
     var input = readInput();
-    IO.println(input.stream().mapToInt(Machine::countFewestPresses).sum());
+    IO.println(input.stream().parallel().mapToInt(Machine::countFewestPresses).sum());
     IO.println(input.stream().parallel().mapToInt(Machine::countFewestJoltagePressesByGaussJordan).sum());
 }
 
 record Machine(List<Boolean> lights, List<SequencedSet<Integer>> buttons, List<Integer> joltage) {
     int countFewestPresses() {
-        record MachineCount(List<Boolean> lights, int count) {
+        record MachineCount(int lightsMask, int count) {
         }
-        Set<List<Boolean>> seen = new HashSet<>();
+        int targetMask = 0;
+        for (int i = 0; i < lights.size(); ++i) {
+            if (lights.get(i)) {
+                targetMask |= (1 << i);
+            }
+        }
+        if (targetMask == 0) {
+            return 0;
+        }
+        int[] buttonMasks = new int[buttons.size()];
+        for (int i = 0; i < buttons.size(); ++i) {
+            int mask = 0;
+            for (int b : buttons.get(i)) {
+                mask |= (1 << b);
+            }
+            buttonMasks[i] = mask;
+        }
+        boolean[] seen = new boolean[1 << lights.size()];
         Queue<MachineCount> queue = new ArrayDeque<>();
-        List<Boolean> initial = new ArrayList<>();
-        for (int i = 0; i < lights.size(); i++) {
-            initial.add(false);
-        }
-        seen.add(initial);
-        queue.add(new MachineCount(initial, 0));
+        seen[0] = true;
+        queue.add(new MachineCount(0, 0));
         while (!queue.isEmpty()) {
             MachineCount next = queue.poll();
-            if (next.lights.equals(lights)) {
-                return next.count;
-            }
-            for (SequencedSet<Integer> button : buttons) {
-                List<Boolean> switched = new ArrayList<>(next.lights);
-                for (int b : button) {
-                    switched.set(b, !switched.get(b));
-                }
-                if (switched.equals(lights)) {
+            for (int buttonMask : buttonMasks) {
+                int switched = next.lightsMask ^ buttonMask;
+                if (switched == targetMask) {
                     return next.count + 1;
-                } else if (seen.add(switched)) {
+                } else if (!seen[switched]) {
+                    seen[switched] = true;
                     queue.add(new MachineCount(switched, next.count + 1));
                 }
             }
@@ -38,15 +46,19 @@ record Machine(List<Boolean> lights, List<SequencedSet<Integer>> buttons, List<I
 
     int countFewestJoltagePressesByGaussJordan() {
         double[][] columns = new double[buttons.size()][joltage.size()];
+        int[] maxPressesPerButton = new int[buttons.size()];
+        int maxJoltage = joltage.stream().mapToInt(Integer::intValue).max().orElse(0);
         for (int col = 0; col < buttons.size(); col++) {
-            int colNum = col;
-            buttons.get(col).forEach(rownum -> {
-                columns[colNum][rownum] = 1.0;
-            });
+            int minTarget = maxJoltage;
+            for (int rownum : buttons.get(col)) {
+                columns[col][rownum] = 1.0;
+                minTarget = Math.min(minTarget, joltage.get(rownum));
+            }
+            maxPressesPerButton[col] = minTarget;
         }
         Matrix matrix = new Matrix(columns);
         double[] solution = joltage.stream().mapToDouble(Integer::doubleValue).toArray();
-        int[] result = matrix.gaussJordenEliminate(solution);
+        int[] result = matrix.gaussJordenEliminate(solution, maxPressesPerButton);
         return Arrays.stream(result).sum();
     }
 
@@ -160,24 +172,20 @@ static class Matrix {
         }
     }
 
-    record Guess(int[] values, int sum) {
-        @Override
-        public boolean equals(Object o) {
-            return o instanceof Guess g && Arrays.equals(values, g.values);
-        }
-
-        @Override
-        public int hashCode() {
-            return Arrays.hashCode(values);
-        }
+    record Guess(int[] values, int sum, int minIdx) {
     }
 
     int[] gaussJordenEliminate(double[] solution) {
-        long maxJoltage = 0;
+        int maxJoltage = 0;
         for (double d : solution) {
-            maxJoltage = Math.max(maxJoltage, (long) Math.ceil(d));
+            maxJoltage = Math.max(maxJoltage, (int) Math.ceil(d));
         }
+        int[] maxPressesPerButton = new int[elements[0].length];
+        Arrays.fill(maxPressesPerButton, maxJoltage);
+        return gaussJordenEliminate(solution, maxPressesPerButton);
+    }
 
+    int[] gaussJordenEliminate(double[] solution, int[] maxPressesPerButton) {
         eliminate(solution, true);
         int[] pivotRowForVariables = new int[elements[0].length];
         double[] finalSolution = new double[elements[0].length];
@@ -204,6 +212,10 @@ static class Matrix {
         }
 
         int[] freeVarArray = freeVariables.stream().mapToInt(Integer::intValue).toArray();
+        int[] maxFreePresses = new int[freeVarArray.length];
+        for (int i = 0; i < freeVarArray.length; ++i) {
+            maxFreePresses[i] = maxPressesPerButton[freeVarArray[i]];
+        }
 
         boolean[] rowCanBeIncreased = new boolean[elements.length];
         for (int row = 0; row < elements.length; ++row) {
@@ -213,17 +225,15 @@ static class Matrix {
         }
 
         Deque<Guess> queue = new ArrayDeque<>(freeVarArray.length * 10);
-        Set<Guess> seen = new HashSet<>();
-        Guess startGuess = new Guess(new int[freeVarArray.length], 0);
-        queue.add(startGuess);
-        seen.add(startGuess);
+        queue.add(new Guess(new int[freeVarArray.length], 0, 0));
 
-        double[] bestSolution = null;
+        double[] fullSolution = new double[elements[0].length];
+        int[] bestSolution = null;
         int minSum = Integer.MAX_VALUE;
 
         while (!queue.isEmpty()) {
             Guess guess = queue.poll();
-            double[] fullSolution = calculateSolution(pivotRowForVariables, solution, freeVarArray, guess.values);
+            calculateSolution(pivotRowForVariables, solution, freeVarArray, guess.values, fullSolution);
             if (checkGuess(fullSolution)) {
                 int sum = 0;
                 for (double v : fullSolution) {
@@ -231,25 +241,22 @@ static class Matrix {
                 }
                 if (sum < minSum) {
                     minSum = sum;
-                    bestSolution = fullSolution;
+                    bestSolution = toIntArray(fullSolution);
                 }
             }
 
             if (guess.sum < minSum && !canPrune(fullSolution, pivotRowForVariables, rowCanBeIncreased)) {
-                for (int i = 0; i < freeVarArray.length; ++i) {
-                    if (guess.values[i] < maxJoltage) {
+                for (int i = guess.minIdx; i < freeVarArray.length; ++i) {
+                    if (guess.values[i] < maxFreePresses[i]) {
                         int[] nextVals = guess.values.clone();
                         nextVals[i]++;
-                        Guess next = new Guess(nextVals, guess.sum + 1);
-                        if (seen.add(next)) {
-                            queue.add(next);
-                        }
+                        queue.add(new Guess(nextVals, guess.sum + 1, i));
                     }
                 }
             }
         }
         if (bestSolution != null) {
-            return toIntArray(bestSolution);
+            return bestSolution;
         }
         throw new IllegalStateException("No solution found");
     }
@@ -264,8 +271,7 @@ static class Matrix {
         return false;
     }
 
-    double[] calculateSolution(int[] pivotPositions, double[] solution, int[] freeVarArray, int[] guessValues) {
-        double[] fullSolution = new double[elements[0].length];
+    void calculateSolution(int[] pivotPositions, double[] solution, int[] freeVarArray, int[] guessValues, double[] fullSolution) {
         for (int i = 0; i < freeVarArray.length; ++i) {
             fullSolution[freeVarArray[i]] = guessValues[i];
         }
@@ -274,15 +280,11 @@ static class Matrix {
             if (row != -1) {
                 double sum = solution[row];
                 for (int j = 0; j < freeVarArray.length; ++j) {
-                    int freeCol = freeVarArray[j];
-                    if (Math.abs(elements[row][freeCol]) > EPS) {
-                        sum -= elements[row][freeCol] * guessValues[j];
-                    }
+                    sum -= elements[row][freeVarArray[j]] * guessValues[j];
                 }
                 fullSolution[i] = sum;
             }
         }
-        return fullSolution;
     }
 
     int[] toIntArray(double[] doubles) {
